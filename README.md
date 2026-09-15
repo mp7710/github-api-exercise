@@ -59,6 +59,21 @@ python tarefa3.py
 
 ---
 
+#### **Bônus: Visualizar as estatísticas**
+```bash
+python visualizar.py
+```
+
+**O que faz:**
+- 📈 Lê o `tarefa3_resultado.json` gerado pela Tarefa 3
+- 📊 Gera um gráfico de barras comparando estrelas e forks por repositório
+- 🎨 Usa uma paleta segura para daltonismo, com rótulos diretos em cada barra
+- 💾 Salva a imagem em `visualizacao.png`
+
+Requer `matplotlib` (incluído no `requirements.txt`).
+
+---
+
 ### 🚀 Como usar
 
 1. **Clone o repositório:**
@@ -93,11 +108,18 @@ Cada tarefa gera um arquivo JSON com os dados coletados:
 
 ### 🔑 Notas importantes
 
-- A API do GitHub permite 60 requisições por hora sem autenticação
-- Para aumentar o limite, configure um **Personal Access Token**
-- Defina a variável de ambiente: `GITHUB_TOKEN=seu_token`
+- A API do GitHub permite ~60 requisições por hora sem autenticação
+- Para aumentar o limite para ~5000/hora, configure um **Personal Access Token**
+- Defina a variável de ambiente antes de rodar: `export GITHUB_TOKEN=seu_token`
+  (os scripts leem esse token automaticamente e o enviam no cabeçalho `Authorization`)
+- Os scripts tratam o *rate limit* (403) e avisam quanto tempo esperar
 - Os dados são coletados diretamente da API pública do GitHub
-- Valores são arredondados conforme exibidos no GitHub
+
+**Sobre issues x pull requests:** o endpoint `open_issues_count` (e a listagem
+`/issues`) do GitHub **conta pull requests como issues**. Por isso a **Tarefa 2**
+usa a *Search API* (`type:issue` e `type:pr`) para contar os dois separadamente.
+Já a **Tarefa 3** mantém o `open_issues_count` por simplicidade — lembrando que
+esse número inclui os PRs abertos.
 
 ---
 
@@ -125,15 +147,6 @@ Cada tarefa gera um arquivo JSON com os dados coletados:
 
 ---
 
-### 🤝 Contribuições
-
-Sinta-se livre para expandir este exercício adicionando:
-- Novas métricas
-- Visualizações
-- Filtros adicionais
-- Exportação para outros formatos
-
----
 
 ### 📄 Licença
 
