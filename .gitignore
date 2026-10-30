@@ -1,0 +1,6 @@
+# Resultados gerados pelos scripts (dados mudam a cada execução)
+tarefa*_resultado*.json
+visualizacao.png
+__pycache__/
+.env
+.pytest_cache/
