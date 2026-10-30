@@ -6,37 +6,12 @@ Tarefa 1: Explorar sua própria conta no GitHub
 - Calcule o total de estrelas acumuladas
 """
 
-import os
 import json
-import time
 from datetime import datetime, timezone
 
 import requests
 
-API_BASE = "https://api.github.com"
-
-# Cabeçalhos recomendados pelo GitHub. Se GITHUB_TOKEN existir, elevamos o
-# limite de ~60 para ~5000 requisições/hora.
-HEADERS = {
-    "Accept": "application/vnd.github+json",
-    "User-Agent": "github-api-exercise",
-}
-_TOKEN = os.environ.get("GITHUB_TOKEN")
-if _TOKEN:
-    HEADERS["Authorization"] = f"Bearer {_TOKEN}"
-
-
-def get(url, params=None):
-    """GET com cabeçalhos e tratamento de rate limit."""
-    resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
-    if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
-        reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
-        espera = max(0, reset - int(time.time()))
-        raise RuntimeError(
-            f"Limite de requisições atingido. Aguarde ~{espera}s ou "
-            f"configure a variável de ambiente GITHUB_TOKEN."
-        )
-    return resp
+from comum import API_BASE, get
 
 
 def buscar_usuario(username):

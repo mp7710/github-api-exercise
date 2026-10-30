@@ -106,14 +106,44 @@ Cada tarefa gera um arquivo JSON com os dados coletados:
 
 ---
 
-### 🔑 Notas importantes
+### 🔑 Token do GitHub (opcional, recomendado)
 
-- A API do GitHub permite ~60 requisições por hora sem autenticação
-- Para aumentar o limite para ~5000/hora, configure um **Personal Access Token**
-- Defina a variável de ambiente antes de rodar: `export GITHUB_TOKEN=seu_token`
-  (os scripts leem esse token automaticamente e o enviam no cabeçalho `Authorization`)
-- Os scripts tratam o *rate limit* (403) e avisam quanto tempo esperar
-- Os dados são coletados diretamente da API pública do GitHub
+Sem token a API permite **~60 requisições por hora**; com token, **~5000**.
+Os scripts leem o token da variável de ambiente `GITHUB_TOKEN` (ele nunca fica no código).
+
+1. No GitHub: **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Dê um nome, escolha a validade e, em *Repository access*, deixe **Public repositories (read-only)**. Não precisa de nenhuma permissão extra.
+3. Copie o token e defina a variável no terminal antes de rodar:
+
+```bash
+# Linux / macOS
+export GITHUB_TOKEN=seu_token
+
+# Windows (PowerShell)
+$env:GITHUB_TOKEN="seu_token"
+```
+
+Se o limite acabar, o script avisa **a que horas ele volta** em vez de quebrar. Falta de internet também gera uma mensagem clara.
+
+### 🧪 Testes
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Os testes usam uma API do GitHub falsa (nada sai para a internet): usuário inexistente, paginação, repositório sem linguagem, contagem de issues x PRs, limite de requisições e falta de internet.
+
+### 🗂️ Arquivos
+
+| Arquivo | O que é |
+|---|---|
+| `comum.py` | Acesso à API usado pelas três tarefas (token, cabeçalhos, limite de requisições) |
+| `tarefa1.py`, `tarefa2.py`, `tarefa3.py` | As tarefas |
+| `visualizar.py` | Bônus: gráfico a partir da Tarefa 3 |
+| `tests/` | Testes |
+
+Os arquivos `tarefa*_resultado*.json` e `visualizacao.png` são gerados ao rodar e não vão para o GitHub (`.gitignore`).
 
 **Sobre issues x pull requests:** o endpoint `open_issues_count` (e a listagem
 `/issues`) do GitHub **conta pull requests como issues**. Por isso a **Tarefa 2**

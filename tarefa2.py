@@ -6,35 +6,12 @@ Tarefa 2: Analisar um projeto open-source
 - Identifique as linguagens utilizadas
 """
 
-import os
 import json
-import time
 from datetime import datetime, timezone
 
 import requests
 
-API_BASE = "https://api.github.com"
-
-HEADERS = {
-    "Accept": "application/vnd.github+json",
-    "User-Agent": "github-api-exercise",
-}
-_TOKEN = os.environ.get("GITHUB_TOKEN")
-if _TOKEN:
-    HEADERS["Authorization"] = f"Bearer {_TOKEN}"
-
-
-def get(url, params=None):
-    """GET com cabeçalhos e tratamento de rate limit."""
-    resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
-    if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
-        reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
-        espera = max(0, reset - int(time.time()))
-        raise RuntimeError(
-            f"Limite de requisições atingido. Aguarde ~{espera}s ou "
-            f"configure a variável de ambiente GITHUB_TOKEN."
-        )
-    return resp
+from comum import API_BASE, get
 
 
 def buscar_repositorio(owner, repo):
