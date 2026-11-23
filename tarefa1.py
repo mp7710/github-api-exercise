@@ -6,43 +6,22 @@ Tarefa 1: Explorar sua própria conta no GitHub
 - Calcule o total de estrelas acumuladas
 """
 
-import os
 import json
-import time
 from datetime import datetime, timezone
 
 import requests
 
-API_BASE = "https://api.github.com"
-
-# Cabeçalhos recomendados pelo GitHub. Se GITHUB_TOKEN existir, elevamos o
-# limite de ~60 para ~5000 requisições/hora.
-HEADERS = {
-    "Accept": "application/vnd.github+json",
-    "User-Agent": "github-api-exercise",
-}
-_TOKEN = os.environ.get("GITHUB_TOKEN")
-if _TOKEN:
-    HEADERS["Authorization"] = f"Bearer {_TOKEN}"
-
-
-def get(url, params=None):
-    """GET com cabeçalhos e tratamento de rate limit."""
-    resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
-    if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
-        reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
-        espera = max(0, reset - int(time.time()))
-        raise RuntimeError(
-            f"Limite de requisições atingido. Aguarde ~{espera}s ou "
-            f"configure a variável de ambiente GITHUB_TOKEN."
-        )
-    return resp
+from comum import API_BASE, ErroAPI, get
 
 
 def buscar_usuario(username):
     """Busca informações do usuário"""
     resp = get(f"{API_BASE}/users/{username}")
-    return resp.json() if resp.status_code == 200 else None
+    if resp.status_code == 404:
+        return None
+    if resp.status_code != 200:
+        raise ErroAPI(f"Falha ao buscar usuário (HTTP {resp.status_code}).")
+    return resp.json()
 
 
 def listar_repositorios(username):
@@ -50,10 +29,12 @@ def listar_repositorios(username):
     repos = []
     page = 1
     while True:
+        # "owner" = repositórios do próprio usuário (os valores válidos são all, owner e member).
         resp = get(f"{API_BASE}/users/{username}/repos",
-                   params={"page": page, "per_page": 100, "type": "public"})
+                   params={"page": page, "per_page": 100, "type": "owner"})
         if resp.status_code != 200:
-            break
+            # Não devolve uma lista pela metade como se estivesse completa.
+            raise ErroAPI(f"Falha ao listar repositórios (página {page}, HTTP {resp.status_code}).")
         data = resp.json()
         if not data:
             break
@@ -71,6 +52,9 @@ def calcular_estrelas_totais(repos):
 
 def main():
     username = input("Digite seu username do GitHub: ").strip()
+    if not username or "/" in username:
+        print("❌ Username inválido!")
+        return
 
     print(f"\n🔍 Buscando informações do usuário '{username}'...\n")
 
@@ -144,5 +128,5 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (requests.RequestException, RuntimeError) as e:
+    except (requests.RequestException, ErroAPI, OSError) as e:
         print(f"\n❌ Erro: {e}")

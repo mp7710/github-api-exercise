@@ -6,41 +6,23 @@ Tarefa 3: Criar um dataset personalizado
 - Gere estatísticas básicas
 """
 
-import os
 import json
-import time
 from datetime import datetime, timezone
 
 import requests
 
-API_BASE = "https://api.github.com"
-
-HEADERS = {
-    "Accept": "application/vnd.github+json",
-    "User-Agent": "github-api-exercise",
-}
-_TOKEN = os.environ.get("GITHUB_TOKEN")
-if _TOKEN:
-    HEADERS["Authorization"] = f"Bearer {_TOKEN}"
-
-
-def get(url, params=None):
-    """GET com cabeçalhos e tratamento de rate limit."""
-    resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
-    if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
-        reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
-        espera = max(0, reset - int(time.time()))
-        raise RuntimeError(
-            f"Limite de requisições atingido. Aguarde ~{espera}s ou "
-            f"configure a variável de ambiente GITHUB_TOKEN."
-        )
-    return resp
+from comum import API_BASE, ErroAPI, get, ler_owner_repo
 
 
 def buscar_repositorio(owner, repo):
     """Busca informações do repositório"""
     resp = get(f"{API_BASE}/repos/{owner}/{repo}")
-    return resp.json() if resp.status_code == 200 else None
+    if resp.status_code == 404:
+        return None
+    if resp.status_code != 200:
+        # 403/5xx não é "não encontrado": avisa o motivo real.
+        raise ErroAPI(f"Falha ao buscar {owner}/{repo} (HTTP {resp.status_code}).")
+    return resp.json()
 
 
 def buscar_linguagens(owner, repo):
@@ -127,7 +109,7 @@ def main():
             repo = input("Repositório (owner/repo) ou 'pronto': ").strip()
             if repo.lower() == "pronto":
                 break
-            if "/" in repo:
+            if ler_owner_repo(repo):
                 repos_para_coletar.append(repo)
             else:
                 print("❌ Formato inválido! Use: owner/repo")
@@ -139,19 +121,24 @@ def main():
     print(f"\n🔍 Coletando dados de {len(repos_para_coletar)} repositórios...\n")
 
     for repo_ref in repos_para_coletar:
-        if "/" not in repo_ref:
+        partes = ler_owner_repo(repo_ref)
+        if not partes:
             continue
 
-        owner, repo = repo_ref.split("/", 1)
+        owner, repo = partes
         print(f"⏳ Analisando {owner}/{repo}...", end=" ")
 
-        dados = coletar_dados_repositorio(owner, repo)
+        try:
+            dados = coletar_dados_repositorio(owner, repo)
+        except (requests.RequestException, ErroAPI) as e:
+            print(f"❌ {e}")
+            continue
 
         if dados:
             repositorios.append(dados)
-            print(f"✅")
+            print("✅")
         else:
-            print(f"❌ Não encontrado")
+            print("❌ Não encontrado")
 
     if not repositorios:
         print("Nenhum repositório foi coletado com sucesso.")
@@ -189,5 +176,5 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (requests.RequestException, RuntimeError) as e:
+    except (requests.RequestException, ErroAPI, OSError) as e:
         print(f"\n❌ Erro: {e}")
