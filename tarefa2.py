@@ -6,41 +6,23 @@ Tarefa 2: Analisar um projeto open-source
 - Identifique as linguagens utilizadas
 """
 
-import os
 import json
-import time
 from datetime import datetime, timezone
 
 import requests
 
-API_BASE = "https://api.github.com"
-
-HEADERS = {
-    "Accept": "application/vnd.github+json",
-    "User-Agent": "github-api-exercise",
-}
-_TOKEN = os.environ.get("GITHUB_TOKEN")
-if _TOKEN:
-    HEADERS["Authorization"] = f"Bearer {_TOKEN}"
-
-
-def get(url, params=None):
-    """GET com cabeçalhos e tratamento de rate limit."""
-    resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
-    if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
-        reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
-        espera = max(0, reset - int(time.time()))
-        raise RuntimeError(
-            f"Limite de requisições atingido. Aguarde ~{espera}s ou "
-            f"configure a variável de ambiente GITHUB_TOKEN."
-        )
-    return resp
+from comum import API_BASE, ErroAPI, get, ler_owner_repo, nome_seguro
 
 
 def buscar_repositorio(owner, repo):
     """Busca informações do repositório"""
     resp = get(f"{API_BASE}/repos/{owner}/{repo}")
-    return resp.json() if resp.status_code == 200 else None
+    if resp.status_code == 404:
+        return None
+    if resp.status_code != 200:
+        # 403/5xx não é "não encontrado": avisa o motivo real.
+        raise ErroAPI(f"Falha ao buscar {owner}/{repo} (HTTP {resp.status_code}).")
+    return resp.json()
 
 
 def buscar_linguagens(owner, repo):
@@ -80,11 +62,12 @@ def main():
 
     repo_input = input("\nDigite o repositório (owner/repo): ").strip()
 
-    if "/" not in repo_input:
+    partes = ler_owner_repo(repo_input)
+    if not partes:
         print("❌ Formato inválido! Use: owner/repo")
         return
 
-    owner, repo = repo_input.split("/", 1)
+    owner, repo = partes
 
     print(f"\n🔍 Analisando {owner}/{repo}...\n")
 
@@ -153,14 +136,15 @@ def main():
         },
     }
 
-    with open(f"tarefa2_resultado_{owner}_{repo}.json", "w", encoding="utf-8") as f:
+    arquivo = f"tarefa2_resultado_{nome_seguro(owner)}_{nome_seguro(repo)}.json"
+    with open(arquivo, "w", encoding="utf-8") as f:
         json.dump(resultado, f, indent=2, ensure_ascii=False)
 
-    print(f"\n💾 Resultado salvo em 'tarefa2_resultado_{owner}_{repo}.json'")
+    print(f"\n💾 Resultado salvo em '{arquivo}'")
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (requests.RequestException, RuntimeError) as e:
+    except (requests.RequestException, ErroAPI, OSError) as e:
         print(f"\n❌ Erro: {e}")
